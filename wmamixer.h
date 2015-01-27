@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <math.h>
 
 #include <X11/X.h>
 #include <X11/Xlib.h>
@@ -45,6 +46,10 @@
 
 #undef CLAMP
 #define CLAMP(v, l, h) (((v) > (h)) ? (h) : (((v) < (l)) ? (l) : (v)))
+
+/* Function to convert from percentage to volume. val = percentage */
+#define convert_prange1(val, min, max) \
+	ceil((val) * ((max) - (min)) * 0.01 + (min))
 
 
 // Pixmaps - standard
@@ -77,7 +82,7 @@ int winsize;
 bool no_volume_display = 0;
 
 // Variables for command-line arguments - custom
-char mixer_device[256] = "default";
+char card[256] = "default";
 char backcolor[256] = BACKCOLOR;
 char ledcolor[256] = LEDCOLOR;
 
@@ -96,7 +101,7 @@ unsigned long color[4];
 
 int text_counter = 0;
 
-// Misc custom global variables 
+// Misc custom global variables
 // ----------------------------
 
 // Current state information
@@ -116,27 +121,49 @@ int rpttimer = 0;
 // For draggable volume control
 bool dragging = false;
 
-int channels = 2;
-int channel[25];
-int icon[25] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 
-    18, 19, 20, 21, 22, 23, 24};
-char *small_labels[25] = {"vol ", "bass", "trbl", "synt", "pcm ",
-    "spkr", "line", "mic ", "cd  ", "mix ", "pcm2", "rec ", "igai", "ogai", 
-    "lin1", "lin2", "lin3", "dig1", "dig2", "dig3", "phin", "phou", "vid ",
-    "rad ", "mon "};
+int channel[32];
+int icon[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+
+struct Selem {
+    char *name;
+    bool stereo;
+    int currentVolRight;
+    int currentVolLeft;
+    short int iconIndex;
+	snd_mixer_elem_t *elem;
+    long min;
+    long max;
+    bool capture;
+    snd_mixer_selem_channel_id_t channels[2];
+    
+};
+
+typedef struct {
+    bool isvolume;
+    bool capture;
+    bool mono;
+} slideCaptureMono;
+
+struct NamesCount {
+    short int pcm, line, lineb, mic, micb, capt, vol;
+} namesCount = {1, 1, 1, 1, 1, 1, 1};
+
+struct Selem *selems[32];
 
 struct Mixer {
-    int openOK;
     int devices_no;
+    snd_mixer_t * handle;
+    void *elems[32];
 };
+
+static int smixer_level = 0;
+static struct snd_mixer_selem_regopt smixer_options;
 
 // Procedures and functions - standard
 void initXWin(int argc, char **argv);
 void freeXWin();
 void createWin(Window *win, int x, int y);
-unsigned long getColor(char *colorname);
-unsigned long mixColor(char *colorname1, int prop1, char *colorname2, 
-        int prop2);
+unsigned long mixColor(char *color1, int prop1, char *color2, int prop2);
 
 // Procedures and functions - custom
 void scanArgs(int argc, char **argv);
@@ -156,14 +183,18 @@ void drawText(char *text);
 void drawBtns(int btns);
 void drawBtn(int x, int y, int w, int h, bool down);
 
-struct Mixer *Mixer_create(char *device);
+void Mixer_set_selem_props(struct Selem *selem, const char *name);
+slideCaptureMono Mixer_getcapabilities(snd_mixer_elem_t *elem);
+
+struct Mixer *Mixer_create(char *devicename);
 void Mixer_set_left(int current, int value);
 void Mixer_set_right(int current, int value);
 void Mixer_write_volume(int current);
 int Mixer_read_left(int current);
 int Mixer_read_right(int current);
-int Mixer_read_volume(int channel, bool read);
-bool Mixer_get_stereo(int channel);
+int Mixer_read_volume(int current, bool read);
+
+void Mixer_set_limits(snd_mixer_elem_t *elem, struct Selem *selem);
 
 void Mixer_destroy(struct Mixer *mix);
 
