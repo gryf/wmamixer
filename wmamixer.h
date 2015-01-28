@@ -51,7 +51,6 @@
 #define convert_prange1(val, min, max) \
 	ceil((val) * ((max) - (min)) * 0.01 + (min))
 
-
 // Pixmaps - standard
 Pixmap pm_main;
 Pixmap pm_tile;
@@ -184,18 +183,19 @@ void drawBtns(int btns);
 void drawBtn(int x, int y, int w, int h, bool down);
 
 void Mixer_set_selem_props(struct Selem *selem, const char *name);
+void Mixer_set_channels(struct Selem *selem);
 slideCaptureMono Mixer_getcapabilities(snd_mixer_elem_t *elem);
 
-struct Mixer *Mixer_create(char *devicename);
+struct Mixer *Mixer_create();
 void Mixer_set_left(int current, int value);
 void Mixer_set_right(int current, int value);
-void Mixer_write_volume(int current);
 int Mixer_read_left(int current);
 int Mixer_read_right(int current);
-int Mixer_read_volume(int current, bool read);
 
 void Mixer_set_limits(snd_mixer_elem_t *elem, struct Selem *selem);
 
 void Mixer_destroy(struct Mixer *mix);
+int Mixer_get_volume(int current, int channelIndex);
+void Mixer_set_volume(int current, int channelIndex, int value);
 
 #endif /* WMAMIXER_H */

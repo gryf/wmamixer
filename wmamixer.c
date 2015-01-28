@@ -14,7 +14,6 @@
 struct Mixer *mix;
 
 int main(int argc, char **argv) {
-    int i;
     XGCValues gcv;
     unsigned long gcm;
     char back_color[] = "back_color";
@@ -70,7 +69,7 @@ int main(int argc, char **argv) {
     XCopyArea(d_display, pm_main, pm_disp, gc_gc, 0, 0, 64, 64, 0, 0);
     XSetClipMask(d_display, gc_gc, None);
 
-    mix = Mixer_create(card);
+    mix = Mixer_create();
 
     readFile();
 
@@ -85,24 +84,30 @@ int main(int argc, char **argv) {
         XMapWindow(d_display, w_main);
 
         bool done = false;
-        while(!done ) {
+        while (!done) {
             while(XPending(d_display) ) {
                 XNextEvent(d_display, &xev);
                 switch(xev.type ) {
                     case Expose:
+                        printf("DEBUG: Expose ev\n");
                         repaint();
                         break;
                     case ButtonPress:
+                        printf("DEBUG: ButtonPress ev\n");
                         pressEvent(&xev.xbutton);
                         break;
                     case ButtonRelease:
+                        printf("DEBUG: ButtonRelease ev\n");
                         releaseEvent();
                         break;
                     case MotionNotify:
+                        printf("DEBUG: MotionNotify ev\n");
                         motionEvent(&xev.xmotion);
                         break;
                     case ClientMessage:
-                        if (xev.xclient.data.l[0] == deleteWin) done=true;
+                        printf("DEBUG: ClientMessage ev\n");
+                        if (xev.xclient.data.l[0] == (int) deleteWin)
+                            done=true;
                         break;
                 }
             }
@@ -154,7 +159,7 @@ int main(int argc, char **argv) {
 }
 
 /* Mixer struct support functions */
-struct Mixer *Mixer_create(char *devicename) {
+struct Mixer *Mixer_create() {
     struct Mixer *mixer = malloc(sizeof(struct Mixer));
     int err;
     const char *name;
@@ -205,14 +210,16 @@ struct Mixer *Mixer_create(char *devicename) {
         if (!capabilities.isvolume)
             continue;
         name = snd_mixer_selem_id_get_name(sid);
-        printf("DEBUG: capabilities cap: %d\n", capabilities.capture);
+
         selems[mixer->devices_no] = malloc(sizeof(struct Selem));
         selems[mixer->devices_no]->elem = elem;
         selems[mixer->devices_no]->capture = capabilities.capture;
+
         Mixer_set_limits(elem, selems[mixer->devices_no]);
         Mixer_set_selem_props(selems[mixer->devices_no], name);
+        Mixer_set_channels(selems[mixer->devices_no]);
+
         mixer->devices_no++;
-        printf("DEBUG: Simple mixer control '%s',%i\n", snd_mixer_selem_id_get_name(sid), snd_mixer_selem_id_get_index(sid));
         if (mixer->devices_no == 32) {
             // stop here. This is ridiculous anyway
             break;
@@ -228,10 +235,7 @@ void Mixer_set_selem_props(struct Selem *selem, const char *name) {
           *cap = "Capture",
           *boost = "Boost",
           *line = "Line";
-
-    snd_mixer_selem_channel_id_t chn;
     char variable[4];
-    int idx;
 
     // Get the name. Simple match.
     if (strcmp("Master", name) == 0) {
@@ -298,16 +302,18 @@ void Mixer_set_selem_props(struct Selem *selem, const char *name) {
         namesCount.pcm++;
         selem->iconIndex = 6;
     }
+}
 
+void Mixer_set_channels(struct Selem *selem) {
+    int idx;
+    snd_mixer_selem_channel_id_t chn;
 
     if (snd_mixer_selem_has_playback_volume(selem->elem)) {
         if (snd_mixer_selem_is_playback_mono(selem->elem)) {
-            printf("DEBUG: playback mono\n");
             selem->stereo = false;
             selem->channels[0] = SND_MIXER_SCHN_MONO;
             selem->channels[1] = SND_MIXER_SCHN_MONO;
         } else {
-            printf("DEBUG: playback stereo\n");
             idx = 0;
             for (chn = 0; chn <= SND_MIXER_SCHN_LAST; chn++){
                 if (!snd_mixer_selem_has_playback_channel(selem->elem, chn))
@@ -321,9 +327,7 @@ void Mixer_set_selem_props(struct Selem *selem, const char *name) {
     }
 
     if (snd_mixer_selem_has_capture_volume(selem->elem)) {
-        printf("Capture channels: ");
         if (snd_mixer_selem_is_capture_mono(selem->elem)) {
-            printf("DEBUG: playback mono\n");
             selem->stereo = false;
             selem->channels[0] = SND_MIXER_SCHN_MONO;
             selem->channels[1] = SND_MIXER_SCHN_MONO;
@@ -401,63 +405,52 @@ static int convert_prange(long val, long min, long max) {
 	return tmp;
 }
 
-/*
-vol_ops = [
-    {"has_volume": snd_mixer_selem_has_playback_volume,
-    "v": [
-        [snd_mixer_selem_get_playback_volume_range,
-         snd_mixer_selem_get_playback_volume,
-         set_playback_raw_volume],
-        [snd_mixer_selem_get_playback_dB_range,
-         snd_mixer_selem_get_playback_dB,
-         set_playback_dB],
-        [get_mapped_volume_range,
-         get_playback_mapped_volume,
-         set_playback_mapped_volume]]
-        },
-    // capt
-    {...}
-]
-*/
-
-long get_volume(snd_mixer_elem_t *elem,
-        snd_mixer_selem_channel_id_t chn,
-        long min, long max, bool capt) {
+int Mixer_get_volume(int current, int channelIndex) {
+    struct Selem *selem = selems[current];
     long raw;
     int volume;
 
-    if (!capt) {
-        snd_mixer_selem_get_playback_volume(elem, chn, &raw);
+    if (!selem->capture) {
+        snd_mixer_selem_get_playback_volume(selem->elem,
+                selem->channels[channelIndex], &raw);
     } else {
-        snd_mixer_selem_get_capture_volume(elem, chn, &raw);
+        snd_mixer_selem_get_capture_volume(selem->elem,
+                selem->channels[channelIndex], &raw);
     }
-    volume = convert_prange(raw, min, max);
+
+    volume = convert_prange(raw, selem->min, selem->max);
     return volume;
 }
 
+void Mixer_set_volume(int current, int channelIndex, int value) {
+    struct Selem *selem = selems[current];
+    long raw;
+
+    raw = (long)convert_prange1(value, selem->min, selem->max);
+
+    if (!selem->capture) {
+        snd_mixer_selem_set_playback_volume(selem->elem, 
+                selem->channels[channelIndex], raw);
+    } else {
+        snd_mixer_selem_set_capture_volume(selem->elem, 
+                selem->channels[channelIndex], raw);
+    }
+}
+
 void Mixer_set_left(int current, int value) {
+    Mixer_set_volume(current, 0, value);
 }
 
 void Mixer_set_right(int current, int value) {
-}
-
-void Mixer_write_volume(int current) {
+    Mixer_set_volume(current, 1, value);
 }
 
 int Mixer_read_left(int current) {
-    struct Selem *selem = selems[current];
-    return get_volume(selem->elem, selem->channels[0],
-            selem->min, selem->max, selem->capture);
+    return Mixer_get_volume(current, 0);
 }
 
 int Mixer_read_right(int current) {
-    struct Selem *selem = selems[current];
-    return get_volume(selem->elem, selem->channels[1],
-            selem->min, selem->max, selem->capture);
-}
-
-int Mixer_read_volume(int current, bool read) {
-    return 50;
+    return Mixer_get_volume(current, 1);
 }
 
 void Mixer_destroy(struct Mixer *mixer) {
@@ -692,7 +685,6 @@ void readFile() {
                     sscanf(buf, "setmono %i", &value);
                     Mixer_set_left(current, value);
                     Mixer_set_right(current, value);
-                    Mixer_write_volume(current);
                 }
             }
 
@@ -704,7 +696,6 @@ void readFile() {
                     int value;
                     sscanf(buf, "setleft %i", &value);
                     Mixer_set_left(current, value);
-                    Mixer_write_volume(current);
                 }
             }
 
@@ -716,7 +707,6 @@ void readFile() {
                     int value;
                     sscanf(buf, "setleft %i", &value);
                     Mixer_set_right(current, value);
-                    Mixer_write_volume(current);
                 }
             }
         }
@@ -726,56 +716,50 @@ void readFile() {
 }
 
 void checkVol(bool forced) {
-  Mixer_read_volume(curchannel, true);
-  int nl = Mixer_read_left(curchannel);
-  int nr = Mixer_read_right(curchannel);
-  if (forced ) {
-    curleft=nl;
-    curright=nr;
-    update();
-    repaint();
-  }
-  else{
-    if (nl!=curleft || nr!=curright ) {
-      if (nl!=curleft ) {
-    curleft=nl;
-    if (selems[curchannel]->stereo)
-      drawLeft();
-    else
-      drawMono();
-      }
-      if (nr!=curright ) {
-    curright=nr;
-    if (selems[curchannel]->stereo)
-      drawRight();
-    else
-      drawMono();
-      }
-      if (!no_volume_display)
-    drawVolLevel();
-      repaint();
+    int nl = Mixer_read_left(curchannel);
+    int nr = Mixer_read_right(curchannel);
+    printf("DEBUG: checkVol: %d, %d\n", nl, nr);
+    if (forced) {
+        curleft = nl;
+        curright = nr;
+        update();
+        repaint();
+    } else {
+        if (nl != curleft || nr != curright) {
+            if (nl != curleft) {
+                curleft = nl;
+                if (selems[curchannel]->stereo)
+                    drawLeft();
+                else
+                    drawMono();
+            }
+            if (nr != curright) {
+                curright = nr;
+                if (selems[curchannel]->stereo)
+                    drawRight();
+                else
+                    drawMono();
+            }
+            if (!no_volume_display)
+                drawVolLevel();
+            repaint();
+        }
     }
-  }
 }
 
 void pressEvent(XButtonEvent *xev) {
     int inc, x, y, v;
 
     if (xev->button == Button4 || xev->button == Button5) {
-        if (xev->button == Button4) {
-            printf("inc\n");
+        if (xev->button == Button4)
             inc = 4;
-        } else {
-            printf("dec\n");
+        else 
             inc = -4;
-        }
 
-        Mixer_read_volume(curchannel, false);
-        Mixer_set_left(curchannel,
+        Mixer_set_left(curchannel, 
                 CLAMP(Mixer_read_left(curchannel) + inc, 0, 100));
-        Mixer_set_right(curchannel,
+        Mixer_set_right(curchannel, 
                 CLAMP(Mixer_read_right(curchannel) + inc, 0, 100));
-        Mixer_write_volume(curchannel);
         checkVol(false);
         return;
     }
@@ -809,7 +793,6 @@ void pressEvent(XButtonEvent *xev) {
             Mixer_set_left(curchannel, v);
         if (x >= 45)
             Mixer_set_right(curchannel, v);
-        Mixer_write_volume(curchannel);
         checkVol(false);
         return;
     }
@@ -838,7 +821,6 @@ void motionEvent(XMotionEvent *xev)
       Mixer_set_left(curchannel, v);
     if (x>=45)
       Mixer_set_right(curchannel, v);
-    Mixer_write_volume(curchannel);
     checkVol(false);
   }
 }
@@ -867,6 +849,8 @@ void drawText(char *text) {
     char *p = text;
     char p2;
     int i;
+
+    printf("DEBUG: Copy text as a label: %s\n", text);
 
     for (i = 0; i < 4; i++, p++) {
         p2 = toupper(*p);
