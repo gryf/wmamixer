@@ -1,4 +1,51 @@
 wmamixer
---------
+========
 
-wmamixer is an alsa mixer for windowmaker based on wmsmixer.
+Wmamixer is a fork of wmsmixer and is an ALSA mixer dockapp for Window Maker.
+
+The code for the ALSA part was taken and adapted from amixer and alsamixer 
+programs from alsa-utils package.
+
+Bugs
+----
+
+If spotted any bug, please report it using bug tracker on bitbucket.
+
+Changes
+-------
+
+Changes with comparison with wmsmixer:
+
+- ALSA instead of OSS. This is real thing, using alsa-lib, not just emulation
+  of OSS.
+- Placement of configuration file changed to "$XDG_CONFIG_HOME/wmamixer.conf",
+  which usually translate to "$HOME/.config/wmamixer.conf"
+
+Limitations
+-----------
+
+1. Currently, wmamixer does not support switches and enum type of controls. 
+Only volume is supported. Enum and switch based ALSA controls are simply 
+ignored.
+
+2. There are controls with really small limit range, for example here is 
+control Beep (pc speaker in other words) which is represented by amixer like 
+this:
+
+    Simple mixer control 'Beep',0
+    Capabilities: pvolume pvolume-joined pswitch pswitch-joined
+    Playback channels: Mono
+    Limits: Playback 0 - 3
+    Mono: Playback 1 [33%] [-12.00dB] [on]
+
+Under "Limits" section, there is a Playback capability with range 0 - 3. Using 
+scrollwheel on such low ranges is somehow awkward. For that controls it's 
+better to use clicking instead of scrolling.
+
+
+Links
+-----
+wmsmixer homepage:
+http://web.archive.org/web/20081024034859/http://www.hibernaculum.net/wmsmixer/index.php
+ALSA homepage:
+http://www.alsa-project.org

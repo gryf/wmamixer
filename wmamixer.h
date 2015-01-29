@@ -63,7 +63,7 @@ Pixmap pm_digits;
 Pixmap pm_chars;
 
 // Xpm images - standard
-#include "XPM/wmsmixer.xpm"
+#include "XPM/wmamixer.xpm"
 #include "XPM/tile.xpm"
 
 // Xpm images - custom
@@ -159,43 +159,40 @@ static int smixer_level = 0;
 static struct snd_mixer_selem_regopt smixer_options;
 
 // Procedures and functions - standard
-void initXWin(int argc, char **argv);
-void freeXWin();
 void createWin(Window *win, int x, int y);
+void freeXWin();
+void initXWin(int argc, char **argv);
 unsigned long mixColor(char *color1, int prop1, char *color2, int prop2);
 
 // Procedures and functions - custom
-void scanArgs(int argc, char **argv);
-void readFile();
-void usage();
 void checkVol(bool forced);
-void pressEvent(XButtonEvent *xev);
-void releaseEvent();
-void motionEvent(XMotionEvent *xev);
-void repaint();
-void update();
-void drawLeft();
-void drawRight();
-void drawMono();
-void drawVolLevel();
-void drawText(char *text);
-void drawBtns(int btns);
 void drawBtn(int x, int y, int w, int h, bool down);
-
-void Mixer_set_selem_props(struct Selem *selem, const char *name);
-void Mixer_set_channels(struct Selem *selem);
-slideCaptureMono Mixer_getcapabilities(snd_mixer_elem_t *elem);
+void drawBtns(int btns);
+void drawLeft();
+void drawMono();
+void drawRight();
+void drawText(char *text);
+void drawVolLevel();
+void motionEvent(XMotionEvent *xev);
+void pressEvent(XButtonEvent *xev);
+void readFile();
+void releaseEvent();
+void repaint();
+void scanArgs(int argc, char **argv);
+void update();
+void usage();
 
 struct Mixer *Mixer_create();
-void Mixer_set_left(int current, int value);
-void Mixer_set_right(int current, int value);
+void Mixer_destroy(struct Mixer *mix);
+slideCaptureMono Mixer_get_capabilities(snd_mixer_elem_t *elem);
+int Mixer_get_volume(int current, int channelIndex);
 int Mixer_read_left(int current);
 int Mixer_read_right(int current);
-
+void Mixer_set_selem_props(struct Selem *selem, const char *name);
+void Mixer_set_channels(struct Selem *selem);
+void Mixer_set_left(int current, int value);
+void Mixer_set_right(int current, int value);
 void Mixer_set_limits(snd_mixer_elem_t *elem, struct Selem *selem);
-
-void Mixer_destroy(struct Mixer *mix);
-int Mixer_get_volume(int current, int channelIndex);
 void Mixer_set_volume(int current, int channelIndex, int value);
 
 #endif /* WMAMIXER_H */

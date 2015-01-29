@@ -16,17 +16,8 @@ struct Mixer *mix;
 int main(int argc, char **argv) {
     XGCValues gcv;
     unsigned long gcm;
-    char back_color[] = "back_color";
-    char led_color_high[] = "led_color_high";
-    char led_color_med[] = "led_color_med";
-    char led_color_low[] = "led_color_low";
+
     XpmAttributes xpmattr;
-    XpmColorSymbol xpmcsym[4] = {
-        {back_color, NULL, color[0]},
-        {led_color_high, NULL, color[1]},
-        {led_color_med, NULL, color[2]},
-        {led_color_low, NULL, color[3]}
-    };
 
     scanArgs(argc, argv);
     initXWin(argc, argv);
@@ -40,12 +31,19 @@ int main(int argc, char **argv) {
     color[2] = mixColor(ledcolor, 60, backcolor, 40);
     color[3] = mixColor(ledcolor, 25, backcolor, 75);
 
+    XpmColorSymbol xpmcsym[4] = {
+        {"back_color", NULL, color[0]},
+        {"led_color_high", NULL, color[1]},
+        {"led_color_med", NULL, color[2]},
+        {"led_color_low", NULL, color[3]}
+    };
+
     xpmattr.numsymbols = 4;
     xpmattr.colorsymbols = xpmcsym;
     xpmattr.exactColors = false;
     xpmattr.closeness = 40000;
     xpmattr.valuemask = XpmColorSymbols | XpmExactColors | XpmCloseness;
-    XpmCreatePixmapFromData(d_display, w_root, wmsmixer_xpm, &pm_main,
+    XpmCreatePixmapFromData(d_display, w_root, wmamixer_xpm, &pm_main,
             &pm_mask, &xpmattr);
     XpmCreatePixmapFromData(d_display, w_root, tile_xpm, &pm_tile, NULL,
             &xpmattr);
@@ -89,23 +87,18 @@ int main(int argc, char **argv) {
                 XNextEvent(d_display, &xev);
                 switch(xev.type ) {
                     case Expose:
-                        printf("DEBUG: Expose ev\n");
                         repaint();
                         break;
                     case ButtonPress:
-                        printf("DEBUG: ButtonPress ev\n");
                         pressEvent(&xev.xbutton);
                         break;
                     case ButtonRelease:
-                        printf("DEBUG: ButtonRelease ev\n");
                         releaseEvent();
                         break;
                     case MotionNotify:
-                        printf("DEBUG: MotionNotify ev\n");
                         motionEvent(&xev.xmotion);
                         break;
                     case ClientMessage:
-                        printf("DEBUG: ClientMessage ev\n");
                         if (xev.xclient.data.l[0] == (int) deleteWin)
                             done=true;
                         break;
@@ -136,11 +129,10 @@ int main(int argc, char **argv) {
                     drawVolLevel();
                     repaint();
                 }
-                //  printf("%c", text_counter);
             }
 
             XFlush(d_display);
-
+            snd_mixer_handle_events(mix->handle);
             usleep(50000);
         }
     }
@@ -205,7 +197,7 @@ struct Mixer *Mixer_create() {
         if (!snd_mixer_selem_is_active(elem))
             continue;
 
-        capabilities = Mixer_getcapabilities(elem);
+        capabilities = Mixer_get_capabilities(elem);
 
         if (!capabilities.isvolume)
             continue;
@@ -235,11 +227,12 @@ void Mixer_set_selem_props(struct Selem *selem, const char *name) {
           *cap = "Capture",
           *boost = "Boost",
           *line = "Line";
-    char variable[4];
+    char variable[5];
 
     // Get the name. Simple match.
     if (strcmp("Master", name) == 0) {
         selem->name = "mstr";
+        selem->iconIndex = 0;
     } else if (strstr(pcm, name)) {
         selem->iconIndex = 1;
         if (strcmp(pcm, name) == 0) {
@@ -297,9 +290,9 @@ void Mixer_set_selem_props(struct Selem *selem, const char *name) {
         selem->iconIndex = 3;
     } else {
         /* defaults */
+        printf("defaults\n");
         sprintf(variable, "vol%d", namesCount.vol);
-        selem->name = variable;
-        namesCount.pcm++;
+        namesCount.vol++;
         selem->iconIndex = 6;
     }
 }
@@ -345,7 +338,7 @@ void Mixer_set_channels(struct Selem *selem) {
     }
 }
 
-slideCaptureMono Mixer_getcapabilities(snd_mixer_elem_t *elem) {
+slideCaptureMono Mixer_get_capabilities(snd_mixer_elem_t *elem) {
     slideCaptureMono retval;
     retval.mono = false;
     retval.capture = false;
@@ -718,7 +711,6 @@ void readFile() {
 void checkVol(bool forced) {
     int nl = Mixer_read_left(curchannel);
     int nr = Mixer_read_right(curchannel);
-    printf("DEBUG: checkVol: %d, %d\n", nl, nr);
     if (forced) {
         curleft = nl;
         curright = nr;
@@ -849,8 +841,6 @@ void drawText(char *text) {
     char *p = text;
     char p2;
     int i;
-
-    printf("DEBUG: Copy text as a label: %s\n", text);
 
     for (i = 0; i < 4; i++, p++) {
         p2 = toupper(*p);
