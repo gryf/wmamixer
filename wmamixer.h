@@ -1,4 +1,4 @@
-// wmamixer - An alsa mixer designed for WindowMaker with scrollwheel support
+// wmamixer - An ALSA mixer designed for WindowMaker with scrollwheel support
 // Copyright (C) 2015  Roman Dobosz <gryf@vimja.com>
 // Copyright (C) 2003  Damian Kramer <psiren@hibernaculum.net>
 // Copyright (C) 1998  Sam Hawker <shawkie@geocities.com>
@@ -121,7 +121,6 @@ int rpttimer = 0;
 bool dragging = false;
 
 int channel[32];
-int icon[9] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 
 struct Selem {
     char *name;
@@ -134,7 +133,6 @@ struct Selem {
     long max;
     bool capture;
     snd_mixer_selem_channel_id_t channels[2];
-    
 };
 
 typedef struct {
@@ -144,16 +142,19 @@ typedef struct {
 } slideCaptureMono;
 
 struct NamesCount {
-    short int pcm, line, lineb, mic, micb, capt, vol;
-} namesCount = {1, 1, 1, 1, 1, 1, 1};
+    short int pcm, line, lineb, mic, micb, capt, vol, aux;
+} namesCount = {1, 1, 1, 1, 1, 1, 1, 1};
 
-struct Selem *selems[32];
+struct Selem *selems[32] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL, NULL};
 
 struct Mixer {
     int devices_no;
     snd_mixer_t * handle;
-    void *elems[32];
 };
+
+struct Mixer *mix;
 
 static int smixer_level = 0;
 static struct snd_mixer_selem_regopt smixer_options;
@@ -168,14 +169,12 @@ unsigned long mixColor(char *color1, int prop1, char *color2, int prop2);
 void checkVol(bool forced);
 void drawBtn(int x, int y, int w, int h, bool down);
 void drawBtns(int btns);
-void drawLeft();
+void drawStereo(bool left);
 void drawMono();
-void drawRight();
 void drawText(char *text);
 void drawVolLevel();
 void motionEvent(XMotionEvent *xev);
 void pressEvent(XButtonEvent *xev);
-void readFile();
 void releaseEvent();
 void repaint();
 void scanArgs(int argc, char **argv);
@@ -194,5 +193,8 @@ void Mixer_set_left(int current, int value);
 void Mixer_set_right(int current, int value);
 void Mixer_set_limits(snd_mixer_elem_t *elem, struct Selem *selem);
 void Mixer_set_volume(int current, int channelIndex, int value);
+
+void Selem_set_name(struct Selem *selem, const char *name, short int *count);
+void Selem_destroy();
 
 #endif /* WMAMIXER_H */

@@ -1,4 +1,4 @@
-// wmamixer - An alsa mixer designed for WindowMaker with scrollwheel support
+// wmamixer - An ALSA mixer designed for WindowMaker with scrollwheel support
 // Copyright (C) 2015  Roman Dobosz <gryf@vimja.com>
 // Copyright (C) 2003  Damian Kramer <psiren@hibernaculum.net>
 // Copyright (C) 1998  Sam Hawker <shawkie@geocities.com>
@@ -9,9 +9,6 @@
 // See the README file for a more complete notice.
 
 #include "wmamixer.h"
-
-// global mixer struct
-struct Mixer *mix;
 
 int main(int argc, char **argv) {
     XGCValues gcv;
@@ -68,8 +65,6 @@ int main(int argc, char **argv) {
     XSetClipMask(d_display, gc_gc, None);
 
     mix = Mixer_create();
-
-    readFile();
 
     if (mix->devices_no == 0)
         fprintf(stderr,"%s: Sorry, no supported channels found.\n", NAME);
@@ -146,6 +141,7 @@ int main(int argc, char **argv) {
     XFreePixmap(d_display, pm_digits);
     XFreePixmap(d_display, pm_chars);
     freeXWin();
+    Selem_destroy();
     Mixer_destroy(mix);
     return 0;
 }
@@ -220,86 +216,112 @@ struct Mixer *Mixer_create() {
     return mixer;
 }
 
-/* Guess and return short name for the mixer simple element */
 void Mixer_set_selem_props(struct Selem *selem, const char *name) {
     const char *pcm = "PCM",
           *mic = "Mic",
           *cap = "Capture",
           *boost = "Boost",
-          *line = "Line";
-    char variable[5];
+          *line = "Line",
+          *aux = "Aux";
 
-    // Get the name. Simple match.
     if (strcmp("Master", name) == 0) {
         selem->name = "mstr";
         selem->iconIndex = 0;
     } else if (strstr(pcm, name)) {
         selem->iconIndex = 1;
-        if (strcmp(pcm, name) == 0) {
+        if (strcmp(pcm, name) == 0)
             selem->name = "pcm ";
-        } else {
-            sprintf(variable, "pcm%d", namesCount.pcm);
-            selem->name = variable;
-            namesCount.pcm++;
-        }
+        else 
+            Selem_set_name(selem, "pcm", &namesCount.pcm);
+
     } else if (strstr("Headphone", name)) {
         selem->name = "hdph";
         selem->iconIndex = 8;
-    } else if (strstr("Beep", name)) {
+    } else if (strstr("Beep", name) || strstr("PC Speaker", name)) {
         selem->name = "beep";
         selem->iconIndex = 7;
     } else if (strstr("Digital", name)) {
-        selem->iconIndex = selem->capture ? 3 : 6;
+        selem->iconIndex = selem->capture ? 3 : 15;
         selem->name = "digt";
+    } else if (strstr("Bass", name)) {
+        selem->name = "bass";
+        selem->iconIndex = 9;
+    } else if (strstr("Treble", name)) {
+        selem->name = "trbl";
+        selem->iconIndex = 10;
+    } else if (strstr("Synth", name)) {
+        selem->name = "synt";
+        selem->iconIndex = 11;
+    } else if (strstr("CD", name)) {
+        selem->name = " cd ";
+        selem->iconIndex = 12;
+    } else if (strstr("Phone", name)) {
+        selem->name = "phne";
+        selem->iconIndex = 13;
+    } else if (strstr("Video", name)) {
+        selem->name = "vdeo";
+        selem->iconIndex = 14;
     } else if (strstr(mic, name)) {
         if (strcmp(mic, name) == 0) {
             selem->name = "mic ";
         } else {
-            if (strstr(boost, name)) {
-                sprintf(variable, "mib%d", namesCount.micb);
-                namesCount.micb++;
-            } else {
-                sprintf(variable, "mib%d", namesCount.mic);
-                namesCount.mic++;
-            }
-            selem->name = variable;
+            if (strstr(boost, name))
+                Selem_set_name(selem, "mib", &namesCount.micb);
+            else
+                Selem_set_name(selem, "mic", &namesCount.mic);
         }
         selem->iconIndex = 4;
+    } else if (strstr(aux, name)) {
+        if (strcmp(aux, name) == 0) {
+            selem->name = "aux ";
+        } else {
+            Selem_set_name(selem, "aux", &namesCount.aux);
+        }
+        selem->iconIndex = 5;
     } else if (strstr(line, name)) {
         if (strcmp(line, name) == 0) {
             selem->name = "line";
         } else {
-            if (strstr(boost, name)) {
-                sprintf(variable, "lnb%d", namesCount.lineb);
-                namesCount.lineb++;
-            } else {
-                sprintf(variable, "lin%d", namesCount.line);
-                namesCount.line++;
-            }
-            selem->name = variable;
+            if (strstr(boost, name))
+                Selem_set_name(selem, "lnb", &namesCount.lineb);
+            else
+                Selem_set_name(selem, "lin", &namesCount.line);
         }
         selem->iconIndex = 5;
     } else if (strstr(cap, name)) {
         if (strcmp(cap, name) == 0) {
             selem->name = "cap ";
         } else {
-            sprintf(variable, "cap%d", namesCount.capt);
-            selem->name = variable;
-            namesCount.capt++;
+            Selem_set_name(selem, "cap", &namesCount.capt);
         }
         selem->iconIndex = 3;
     } else {
-        /* defaults */
-        printf("defaults\n");
-        sprintf(variable, "vol%d", namesCount.vol);
         namesCount.vol++;
         selem->iconIndex = 6;
+        Selem_set_name(selem, name, &namesCount.vol);
     }
+}
+
+void Selem_set_name(struct Selem *selem, const char *name, short int *count) {
+    char new_name[5], buf[5];
+
+    if (*count > 10)
+        snprintf(new_name, 5, "%s", name);
+    else {
+        snprintf(buf, 4, "%s", name);
+        printf("%s: %s\n", name, buf);
+        snprintf(new_name, 5, "%s%d", buf, *count);
+    }
+
+    selem->name = new_name;
+    *count = *count + 1;
 }
 
 void Mixer_set_channels(struct Selem *selem) {
     int idx;
     snd_mixer_selem_channel_id_t chn;
+
+    selem->stereo = true;
 
     if (snd_mixer_selem_has_playback_volume(selem->elem)) {
         if (snd_mixer_selem_is_playback_mono(selem->elem)) {
@@ -422,10 +444,10 @@ void Mixer_set_volume(int current, int channelIndex, int value) {
     raw = (long)convert_prange1(value, selem->min, selem->max);
 
     if (!selem->capture) {
-        snd_mixer_selem_set_playback_volume(selem->elem, 
+        snd_mixer_selem_set_playback_volume(selem->elem,
                 selem->channels[channelIndex], raw);
     } else {
-        snd_mixer_selem_set_capture_volume(selem->elem, 
+        snd_mixer_selem_set_capture_volume(selem->elem,
                 selem->channels[channelIndex], raw);
     }
 }
@@ -452,90 +474,101 @@ void Mixer_destroy(struct Mixer *mixer) {
     free(mixer);
 }
 
-void initXWin(int argc, char **argv)
-{
-  winsize=astep ? ASTEPSIZE : NORMSIZE;
+void Selem_destroy() {
+    int i;
 
-  if ((d_display=XOpenDisplay(display))==NULL ) {
-    fprintf(stderr,"%s: Unable to open X display '%s'.\n", NAME, XDisplayName(display));
-    exit(1);
-  }
-  _XA_GNUSTEP_WM_FUNC=XInternAtom(d_display, "_GNUSTEP_WM_FUNCTION", false);
-  deleteWin=XInternAtom(d_display, "WM_DELETE_WINDOW", false);
-
-  w_root=DefaultRootWindow(d_display);
-
-  XWMHints wmhints;
-  XSizeHints shints;
-  shints.x=0;
-  shints.y=0;
-  shints.flags=0;
-  bool pos=(XWMGeometry(d_display, DefaultScreen(d_display), position, NULL, 0, &shints, &shints.x, &shints.y,
-            &shints.width, &shints.height, &shints.win_gravity) & (XValue | YValue));
-  shints.min_width=winsize;
-  shints.min_height=winsize;
-  shints.max_width=winsize;
-  shints.max_height=winsize;
-  shints.base_width=winsize;
-  shints.base_height=winsize;
-  shints.flags=PMinSize | PMaxSize | PBaseSize;
-
-  createWin(&w_main, shints.x, shints.y);
-
-  if (wmaker || astep || pos)
-    shints.flags |= USPosition;
-  if (wmaker ) {
-    wmhints.initial_state=WithdrawnState;
-    wmhints.flags=WindowGroupHint | StateHint | IconWindowHint;
-    createWin(&w_icon, shints.x, shints.y);
-    w_activewin=w_icon;
-    wmhints.icon_window=w_icon;
-  }
-  else{
-    wmhints.initial_state=NormalState;
-    wmhints.flags=WindowGroupHint | StateHint;
-    w_activewin=w_main;
-  }
-  wmhints.window_group=w_main;
-  XSetWMHints(d_display, w_main, &wmhints);
-  XSetWMNormalHints(d_display, w_main, &shints);
-  XSetCommand(d_display, w_main, argv, argc);
-  XStoreName(d_display, w_main, NAME);
-  XSetIconName(d_display, w_main, NAME);
-  XSetWMProtocols(d_display, w_activewin, &deleteWin, 1);
+    for (i = 0; i < mix->devices_no; i++) {
+        free(selems[i]);
+    }
 }
 
-void freeXWin()
-{
-  XDestroyWindow(d_display, w_main);
-  if (wmaker)
-    XDestroyWindow(d_display, w_icon);
-  XCloseDisplay(d_display);
+
+void initXWin(int argc, char **argv) {
+    bool pos;
+    winsize = astep ? ASTEPSIZE : NORMSIZE;
+    XWMHints wmhints;
+    XSizeHints shints;
+
+    if ((d_display = XOpenDisplay(display)) == NULL) {
+        fprintf(stderr, "%s: Unable to open X display '%s'.\n", NAME,
+                XDisplayName(display));
+        exit(1);
+    }
+    _XA_GNUSTEP_WM_FUNC = XInternAtom(d_display, "_GNUSTEP_WM_FUNCTION",
+            false);
+    deleteWin = XInternAtom(d_display, "WM_DELETE_WINDOW", false);
+
+    w_root=DefaultRootWindow(d_display);
+
+    shints.x = 0;
+    shints.y = 0;
+    shints.flags = 0;
+    pos = (XWMGeometry(d_display, DefaultScreen(d_display), position, NULL, 0, 
+                &shints, &shints.x, &shints.y, &shints.width, &shints.height, 
+                &shints.win_gravity) & (XValue | YValue)) == 1;
+    shints.min_width = winsize;
+    shints.min_height = winsize;
+    shints.max_width = winsize;
+    shints.max_height = winsize;
+    shints.base_width = winsize;
+    shints.base_height = winsize;
+    shints.flags = PMinSize | PMaxSize | PBaseSize;
+
+    createWin(&w_main, shints.x, shints.y);
+
+    if (wmaker || astep || pos)
+        shints.flags |= USPosition;
+    if (wmaker) {
+        wmhints.initial_state = WithdrawnState;
+        wmhints.flags = WindowGroupHint | StateHint | IconWindowHint;
+        createWin(&w_icon, shints.x, shints.y);
+        w_activewin = w_icon;
+        wmhints.icon_window = w_icon;
+    } else {
+        wmhints.initial_state = NormalState;
+        wmhints.flags = WindowGroupHint | StateHint;
+        w_activewin = w_main;
+    }
+    wmhints.window_group = w_main;
+    XSetWMHints(d_display, w_main, &wmhints);
+    XSetWMNormalHints(d_display, w_main, &shints);
+    XSetCommand(d_display, w_main, argv, argc);
+    XStoreName(d_display, w_main, NAME);
+    XSetIconName(d_display, w_main, NAME);
+    XSetWMProtocols(d_display, w_activewin, &deleteWin, 1);
 }
 
-void createWin(Window *win, int x, int y)
-{
-  XClassHint classHint;
-  *win=XCreateSimpleWindow(d_display, w_root, x, y, winsize, winsize, 0, 0, 0);
-  classHint.res_name=NAME;
-  classHint.res_class=CLASS;
-  XSetClassHint(d_display, *win, &classHint);
+void freeXWin() {
+    XDestroyWindow(d_display, w_main);
+    if (wmaker)
+        XDestroyWindow(d_display, w_icon);
+    XCloseDisplay(d_display);
 }
 
-unsigned long mixColor(char *colorname1, int prop1, char *colorname2, int prop2)
-{
-  XColor color, color1, color2;
-  XWindowAttributes winattr;
-  XGetWindowAttributes(d_display, w_root, &winattr);
-  XParseColor(d_display, winattr.colormap, colorname1, &color1);
-  XParseColor(d_display, winattr.colormap, colorname2, &color2);
-  color.pixel=0;
-  color.red=(color1.red*prop1+color2.red*prop2)/(prop1+prop2);
-  color.green=(color1.green*prop1+color2.green*prop2)/(prop1+prop2);
-  color.blue=(color1.blue*prop1+color2.blue*prop2)/(prop1+prop2);
-  color.flags=DoRed | DoGreen | DoBlue;
-  XAllocColor(d_display, winattr.colormap, &color);
-  return color.pixel;
+void createWin(Window *win, int x, int y) {
+    XClassHint classHint;
+    *win = XCreateSimpleWindow(d_display, w_root, x, y, winsize, winsize, 0,
+            0, 0);
+    classHint.res_name = NAME;
+    classHint.res_class = CLASS;
+    XSetClassHint(d_display, *win, &classHint);
+}
+
+unsigned long mixColor(char *colorname1, int prop1, char *colorname2,
+        int prop2) {
+    XColor color, color1, color2;
+    XWindowAttributes winattr;
+    XGetWindowAttributes(d_display, w_root, &winattr);
+    XParseColor(d_display, winattr.colormap, colorname1, &color1);
+    XParseColor(d_display, winattr.colormap, colorname2, &color2);
+    color.pixel = 0;
+    color.red = (color1.red * prop1 + color2.red * prop2) / (prop1 + prop2);
+    color.green = (color1.green * prop1 + color2.green * prop2) / 
+        (prop1 + prop2);
+    color.blue = (color1.blue * prop1 + color2.blue * prop2) / (prop1 + prop2);
+    color.flags = DoRed | DoGreen | DoBlue;
+    XAllocColor(d_display, winattr.colormap, &color);
+    return color.pixel;
 }
 
 void scanArgs(int argc, char **argv) {
@@ -627,87 +660,6 @@ void scanArgs(int argc, char **argv) {
     }
 }
 
-void readFile() {
-    FILE *rcfile;
-    int done, current = -1;
-    char *confpath, buf[256];
-
-    if (getenv("XDG_CONFIG_HOME")) {
-        confpath = malloc(snprintf(NULL, 0, "%s%s", getenv("XDG_CONFIG_HOME"),
-                    "/wmamixer.conf") + 1);
-        sprintf(confpath, "%s%s", getenv("XDG_CONFIG_HOME"), "/wmamixer.conf");
-    } else {
-        confpath = malloc(snprintf(NULL, 0, "%s%s", getenv("HOME"),
-                "/.config/wmamixer.conf") + 1);
-        sprintf(confpath, "%s%s", getenv("HOME"), "/.config/wmamixer.conf");
-    }
-
-    if(access(confpath, 0) != 0) {
-        fprintf(stderr, "%s: No config file found.\n", NAME);
-        free(confpath);
-        return;
-    }
-
-    if ((rcfile = fopen(confpath, "r")) == NULL) {
-        fprintf(stderr, "%s: Cannot open config file. Using defaults.\n",
-                NAME);
-        free(confpath);
-        return;
-    }
-
-    do {
-        fgets(buf, 250, rcfile);
-        if ((done=feof(rcfile)) == 0) {
-            buf[strlen(buf) - 1] = 0;
-
-            if (strncmp(buf, "setchannel ", strlen("setchannel ")) == 0) {
-                sscanf(buf, "setchannel %i", &current);
-                if (current >= mix->devices_no ) {
-                    fprintf(stderr,"%s: Sorry, this channel (%i) is "
-                            "not supported.\n", NAME, current);
-                    current = -1;
-                }
-            }
-
-            if (strncmp(buf, "setmono ", strlen("setmono ")) == 0) {
-                if (current == -1) {
-                    fprintf(stderr,"%s: Sorry, no current channel.\n",
-                            NAME);
-                } else {
-                    int value;
-                    sscanf(buf, "setmono %i", &value);
-                    Mixer_set_left(current, value);
-                    Mixer_set_right(current, value);
-                }
-            }
-
-            if (strncmp(buf, "setleft ", strlen("setleft ")) == 0 ) {
-                if (current == -1) {
-                    fprintf(stderr, "%s: Sorry, no current channel.\n",
-                            NAME);
-                } else {
-                    int value;
-                    sscanf(buf, "setleft %i", &value);
-                    Mixer_set_left(current, value);
-                }
-            }
-
-            if (strncmp(buf, "setright ", strlen("setright ")) == 0 ) {
-                if (current == -1) {
-                    fprintf(stderr, "%s: Sorry, no current channel.\n",
-                            NAME);
-                } else{
-                    int value;
-                    sscanf(buf, "setleft %i", &value);
-                    Mixer_set_right(current, value);
-                }
-            }
-        }
-    }  while (done == 0);
-    fclose(rcfile);
-    free(confpath);
-}
-
 void checkVol(bool forced) {
     int nl = Mixer_read_left(curchannel);
     int nr = Mixer_read_right(curchannel);
@@ -721,14 +673,14 @@ void checkVol(bool forced) {
             if (nl != curleft) {
                 curleft = nl;
                 if (selems[curchannel]->stereo)
-                    drawLeft();
+                    drawStereo(true);
                 else
                     drawMono();
             }
             if (nr != curright) {
                 curright = nr;
                 if (selems[curchannel]->stereo)
-                    drawRight();
+                    drawStereo(false);
                 else
                     drawMono();
             }
@@ -745,12 +697,12 @@ void pressEvent(XButtonEvent *xev) {
     if (xev->button == Button4 || xev->button == Button5) {
         if (xev->button == Button4)
             inc = 4;
-        else 
+        else
             inc = -4;
 
-        Mixer_set_left(curchannel, 
+        Mixer_set_left(curchannel,
                 CLAMP(Mixer_read_left(curchannel) + inc, 0, 100));
-        Mixer_set_right(curchannel, 
+        Mixer_set_right(curchannel,
                 CLAMP(Mixer_read_right(curchannel) + inc, 0, 100));
         checkVol(false);
         return;
@@ -801,27 +753,26 @@ void releaseEvent() {
     repaint();
 }
 
-void motionEvent(XMotionEvent *xev)
-{
-  int x=xev->x-(winsize/2-32);
-  int y=xev->y-(winsize/2-32);
-  if (x>=37 && x<=56 && y>=8 && dragging ) {
-    int v=((60-y)*100)/(2*25);
-    if (v<0)
-      v=0;
-    if (x<=50)
-      Mixer_set_left(curchannel, v);
-    if (x>=45)
-      Mixer_set_right(curchannel, v);
-    checkVol(false);
-  }
+void motionEvent(XMotionEvent *xev) {
+    int x = xev->x - (winsize / 2 - 32);
+    int y = xev->y - (winsize / 2 - 32);
+    if (x >= 37 && x <= 56 && y >= 8 && dragging) {
+        int v = ((60 - y) * 100) / (2 * 25);
+        if (v < 0)
+            v = 0;
+        if (x <= 50)
+            Mixer_set_left(curchannel, v);
+        if (x >= 45)
+            Mixer_set_right(curchannel, v);
+        checkVol(false);
+    }
 }
 
-void repaint()
-{
-  XCopyArea(d_display, pm_disp, w_activewin, gc_gc, 0, 0, 64, 64, winsize/2-32, winsize/2-32);
-  XEvent xev;
-  while(XCheckTypedEvent(d_display, Expose, &xev));
+void repaint() {
+    XCopyArea(d_display, pm_disp, w_activewin, gc_gc, 0, 0, 64, 64,
+            winsize / 2 - 32, winsize / 2 - 32);
+    XEvent xev;
+    while(XCheckTypedEvent(d_display, Expose, &xev));
 }
 
 void update() {
@@ -830,8 +781,8 @@ void update() {
     XCopyArea(d_display, pm_icon, pm_disp, gc_gc,
             selems[curchannel]->iconIndex * 26, 0, 26, 24, 5, 19);
     if (selems[curchannel]->stereo) {
-        drawLeft();
-        drawRight();
+        drawStereo(true);
+        drawStereo(false);
     } else {
         drawMono();
     }
@@ -878,63 +829,51 @@ void drawVolLevel() {
     }
 }
 
-void drawLeft() {
+void drawStereo(bool left) {
     int i;
-  XSetForeground(d_display, gc_gc, color[0]);
-  XFillRectangle(d_display, pm_disp, gc_gc, 46, 7, 2, 49);
+    short pos = left? 37 : 48;
 
-  XSetForeground(d_display, gc_gc, color[1]);
-  for (i = 0; i < 25; i++) {
-    if (i==(curleft*25)/100)
-      XSetForeground(d_display, gc_gc, color[3]);
-    XFillRectangle(d_display, pm_disp, gc_gc, 37, 55-2*i, 9, 1);
-  }
+    XSetForeground(d_display, gc_gc, color[0]);
+    XFillRectangle(d_display, pm_disp, gc_gc, 46, 7, 2, 49);
+
+    XSetForeground(d_display, gc_gc, color[1]);
+    for (i = 0; i < 25; i++) {
+        if (i == ((left ? curleft : curright) * 25) / 100)
+            XSetForeground(d_display, gc_gc, color[3]);
+        XFillRectangle(d_display, pm_disp, gc_gc, pos, 55 - 2 * i, 9, 1);
+    }
 }
 
-void drawRight()
-{
+void drawMono() {
     int i;
-  XSetForeground(d_display, gc_gc, color[0]);
-  XFillRectangle(d_display, pm_disp, gc_gc, 46, 7, 2, 49);
-
-  XSetForeground(d_display, gc_gc, color[1]);
-  for (i=0;i<25;i++) {
-    if (i==(curright*25)/100)
-      XSetForeground(d_display, gc_gc, color[3]);
-    XFillRectangle(d_display, pm_disp, gc_gc, 48, 55-2*i, 9, 1);
-  }
+    XSetForeground(d_display, gc_gc, color[1]);
+    for (i = 0; i < 25; i++) {
+        if (i == (curright * 25) / 100)
+            XSetForeground(d_display, gc_gc, color[3]);
+        XFillRectangle(d_display, pm_disp, gc_gc, 37, 55 - 2 * i, 20, 1);
+    }
 }
 
-void drawMono()
-{
-    int i;
-  XSetForeground(d_display, gc_gc, color[1]);
-  for (i=0;i<25;i++ ) {
-    if (i==(curright*25)/100)
-      XSetForeground(d_display, gc_gc, color[3]);
-    XFillRectangle(d_display, pm_disp, gc_gc, 37, 55-2*i, 20, 1);
-  }
+void drawBtns(int btns) {
+    if (btns & BTNPREV)
+        drawBtn(5, 47, 13, 11, (btnstate & BTNPREV));
+    if (btns & BTNNEXT)
+        drawBtn(18, 47, 13, 11, (btnstate & BTNNEXT));
 }
 
-
-void drawBtns(int btns)
-{
-  if (btns & BTNPREV)
-    drawBtn(5, 47, 13, 11, (btnstate & BTNPREV));
-  if (btns & BTNNEXT)
-    drawBtn(18, 47, 13, 11, (btnstate & BTNNEXT));
-}
-
-void drawBtn(int x, int y, int w, int h, bool down)
-{
-  if (!down)
-    XCopyArea(d_display, pm_main, pm_disp, gc_gc, x, y, w, h, x, y);
-  else {
-    XCopyArea(d_display, pm_main, pm_disp, gc_gc, x, y, 1, h-1, x+w-1, y+1);
-    XCopyArea(d_display, pm_main, pm_disp, gc_gc, x+w-1, y+1, 1, h-1, x, y);
-    XCopyArea(d_display, pm_main, pm_disp, gc_gc, x, y, w-1, 1, x+1, y+h-1);
-    XCopyArea(d_display, pm_main, pm_disp, gc_gc, x+1, y+h-1, w-1, 1, x, y);
-  }
+void drawBtn(int x, int y, int w, int h, bool down) {
+    if (!down) {
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x, y, w, h, x, y);
+    } else {
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x, y, 1, h - 1,
+                x + w - 1, y + 1);
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x + w - 1, y + 1, 1,
+                h - 1, x, y);
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x, y, w - 1, 1, x + 1,
+                y + h - 1);
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x + 1, y + h - 1, w - 1,
+                1, x, y);
+    }
 }
 
 void usage() {

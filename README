@@ -16,10 +16,9 @@ Changes
 
 Changes with comparison with wmsmixer:
 
-- ALSA instead of OSS. This is real thing, using alsa-lib, not just emulation
-  of OSS.
-- Placement of configuration file changed to "$XDG_CONFIG_HOME/wmamixer.conf",
-  which usually translate to "$HOME/.config/wmamixer.conf"
+- ALSA instead of OSS. This is the real thing, using alsa-lib, not just
+  emulation of OSS.
+- Removed config file support, since it doesn't apply anymore
 
 Limitations
 -----------
