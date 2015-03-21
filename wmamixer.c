@@ -66,9 +66,9 @@ int main(int argc, char **argv) {
 
     mix = Mixer_create();
 
-    if (mix->devices_no == 0)
-        fprintf(stderr,"%s: Sorry, no supported channels found.\n", NAME);
-    else {
+    if (mix->devices_no == 0) {
+        fprintf(stderr, "%s: Sorry, no supported channels found.\n", NAME);
+    } else {
         checkVol(true);
 
         XEvent xev;
@@ -78,9 +78,9 @@ int main(int argc, char **argv) {
 
         bool done = false;
         while (!done) {
-            while(XPending(d_display) ) {
+            while (XPending(d_display)) {
                 XNextEvent(d_display, &xev);
-                switch(xev.type ) {
+                switch (xev.type) {
                     case Expose:
                         repaint();
                         break;
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
                         break;
                     case ClientMessage:
                         if (xev.xclient.data.l[0] == (int) deleteWin)
-                            done=true;
+                            done = true;
                         break;
                 }
             }
@@ -231,7 +231,7 @@ void Mixer_set_selem_props(struct Selem *selem, const char *name) {
         selem->iconIndex = 1;
         if (strcmp(pcm, name) == 0)
             selem->name = "pcm ";
-        else 
+        else
             Selem_set_name(selem, "pcm", &namesCount.pcm);
 
     } else if (strstr("Headphone", name)) {
@@ -305,11 +305,11 @@ void Mixer_set_selem_props(struct Selem *selem, const char *name) {
 void Selem_set_name(struct Selem *selem, const char *name, short int *count) {
     char new_name[5], buf[5];
 
-    if (*count > 10)
-        snprintf(new_name, 5, "%s", name);
-    else {
-        snprintf(buf, 4, "%s", name);
-        snprintf(new_name, 5, "%s%d", buf, *count);
+    if (*count > 10) {
+        snprintf(new_name, sizeof(new_name), "%s", name);
+    } else {
+        snprintf(buf, sizeof(buf) - 1, "%s", name);
+        snprintf(new_name, sizeof(new_name), "%s%d", buf, *count);
     }
 
     selem->name = new_name;
@@ -329,7 +329,7 @@ void Mixer_set_channels(struct Selem *selem) {
             selem->channels[1] = SND_MIXER_SCHN_MONO;
         } else {
             idx = 0;
-            for (chn = 0; chn <= SND_MIXER_SCHN_LAST; chn++){
+            for (chn = 0; chn <= SND_MIXER_SCHN_LAST; chn++) {
                 if (!snd_mixer_selem_has_playback_channel(selem->elem, chn))
                     continue;
                 selem->channels[idx] = chn;
@@ -347,7 +347,7 @@ void Mixer_set_channels(struct Selem *selem) {
             selem->channels[1] = SND_MIXER_SCHN_MONO;
         } else {
             idx = 0;
-            for (chn = 0; chn <= SND_MIXER_SCHN_LAST; chn++){
+            for (chn = 0; chn <= SND_MIXER_SCHN_LAST; chn++) {
                 if (!snd_mixer_selem_has_capture_channel(selem->elem, chn))
                     continue;
                 selem->channels[idx] = chn;
@@ -372,7 +372,6 @@ slideCaptureMono Mixer_get_capabilities(snd_mixer_elem_t *elem) {
                 snd_mixer_selem_is_playback_mono(elem) )
             retval.mono = true;
     } else {
-
         if (snd_mixer_selem_has_playback_volume(elem)) {
             retval.isvolume = true;
             if (snd_mixer_selem_has_playback_volume_joined(elem) ||
@@ -408,15 +407,15 @@ void Mixer_set_limits(snd_mixer_elem_t *elem, struct Selem *selem) {
 }
 
 static int convert_prange(long val, long min, long max) {
-	long range = max - min;
-	int tmp;
+    long range = max - min;
+    int tmp;
 
-	if (range == 0)
-		return 0;
+    if (range == 0)
+        return 0;
 
-	val -= min;
-	tmp = rint((double)val/(double)range * 100);
-	return tmp;
+    val -= min;
+    tmp = rint((double)val/(double)range * 100);
+    return tmp;
 }
 
 int Mixer_get_volume(int current, int channelIndex) {
@@ -497,13 +496,13 @@ void initXWin(int argc, char **argv) {
             false);
     deleteWin = XInternAtom(d_display, "WM_DELETE_WINDOW", false);
 
-    w_root=DefaultRootWindow(d_display);
+    w_root = DefaultRootWindow(d_display);
 
     shints.x = 0;
     shints.y = 0;
     shints.flags = 0;
-    pos = (XWMGeometry(d_display, DefaultScreen(d_display), position, NULL, 0, 
-                &shints, &shints.x, &shints.y, &shints.width, &shints.height, 
+    pos = (XWMGeometry(d_display, DefaultScreen(d_display), position, NULL, 0,
+                &shints, &shints.x, &shints.y, &shints.width, &shints.height,
                 &shints.win_gravity) & (XValue | YValue)) == 1;
     shints.min_width = winsize;
     shints.min_height = winsize;
@@ -562,7 +561,7 @@ unsigned long mixColor(char *colorname1, int prop1, char *colorname2,
     XParseColor(d_display, winattr.colormap, colorname2, &color2);
     color.pixel = 0;
     color.red = (color1.red * prop1 + color2.red * prop2) / (prop1 + prop2);
-    color.green = (color1.green * prop1 + color2.green * prop2) / 
+    color.green = (color1.green * prop1 + color2.green * prop2) /
         (prop1 + prop2);
     color.blue = (color1.blue * prop1 + color2.blue * prop2) / (prop1 + prop2);
     color.flags = DoRed | DoGreen | DoBlue;
@@ -603,20 +602,20 @@ void scanArgs(int argc, char **argv) {
                     fprintf(stderr, "%s: Illegal device name.\n", NAME);
                     exit(1);
                 }
-                sprintf(card, "%s", argv[i]);
+                snprintf(card, sizeof(card), "%s", argv[i]);
                 smixer_options.device = card;
             }
             continue;
         }
 
         if (strcmp(argv[i], "-l") == 0) {
-            if ( i < argc - 1) {
+            if (i < argc - 1) {
                 i++;
                 if (strlen(argv[i]) > 255) {
                     fprintf(stderr, "%s: Illegal color name.\n", NAME);
                     exit(1);
                 }
-                sprintf(ledcolor, "%s", argv[i]);
+                snprintf(ledcolor, sizeof(ledcolor), "%s", argv[i]);
             }
             continue;
         }
@@ -628,7 +627,7 @@ void scanArgs(int argc, char **argv) {
                     fprintf(stderr, "%s: Illegal color name.\n", NAME);
                     exit(1);
                 }
-                sprintf(backcolor, "%s", argv[i]);
+                snprintf(backcolor, sizeof(backcolor), "%s", argv[i]);
             }
             continue;
         }
@@ -640,7 +639,7 @@ void scanArgs(int argc, char **argv) {
                     fprintf(stderr, "%s: Illegal position.\n", NAME);
                     exit(1);
                 }
-                sprintf(position, "%s", argv[i]);
+                snprintf(position, sizeof(position), "%s", argv[i]);
             }
             continue;
         }
@@ -652,7 +651,7 @@ void scanArgs(int argc, char **argv) {
                     fprintf(stderr, "%s: Illegal display name.\n", NAME);
                     exit(1);
                 }
-                sprintf(display, "%s", argv[i]);
+                snprintf(display, sizeof(display), "%s", argv[i]);
             }
             continue;
         }
@@ -771,7 +770,9 @@ void repaint() {
     XCopyArea(d_display, pm_disp, w_activewin, gc_gc, 0, 0, 64, 64,
             winsize / 2 - 32, winsize / 2 - 32);
     XEvent xev;
-    while(XCheckTypedEvent(d_display, Expose, &xev));
+    while (XCheckTypedEvent(d_display, Expose, &xev)) {
+        continue;
+    }
 }
 
 void update() {

@@ -8,8 +8,8 @@
 // under certain conditions
 // See the README file for a more complete notice.
 
-#ifndef WMAMIXER_H
-#define WMAMIXER_H
+#ifndef WMAMIXER_H_
+#define WMAMIXER_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,7 +49,7 @@
 
 /* Function to convert from percentage to volume. val = percentage */
 #define convert_prange1(val, min, max) \
-	ceil((val) * ((max) - (min)) * 0.01 + (min))
+    ceil((val) * ((max) - (min)) * 0.01 + (min))
 
 // Pixmaps - standard
 Pixmap pm_main;
@@ -128,7 +128,7 @@ struct Selem {
     int currentVolRight;
     int currentVolLeft;
     short int iconIndex;
-	snd_mixer_elem_t *elem;
+    snd_mixer_elem_t *elem;
     long min;
     long max;
     bool capture;
@@ -147,7 +147,7 @@ struct NamesCount {
 
 struct Selem *selems[32] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL};
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 struct Mixer {
     int devices_no;
@@ -197,4 +197,4 @@ void Mixer_set_volume(int current, int channelIndex, int value);
 void Selem_set_name(struct Selem *selem, const char *name, short int *count);
 void Selem_destroy();
 
-#endif /* WMAMIXER_H */
+#endif  // WMAMIXER_H_
