@@ -312,7 +312,7 @@ void Selem_set_name(struct Selem *selem, const char *name, short int *count) {
         snprintf(new_name, sizeof(new_name), "%s%d", buf, *count);
     }
 
-    selem->name = new_name;
+    selem->name = strdup(new_name);
     *count = *count + 1;
 }
 
