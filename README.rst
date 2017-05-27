@@ -53,9 +53,13 @@ which will output several lines of information and options:
      user@linux ~ $ wmamixer -l red -b '#ffff00'  # red led on yellow background
      user@linux ~ $ wmamixer -b darkslateblue  # Dark Slate Blue background
 
-* ``-d`` selects desired ALSA device. By default, first device is taken which
-  usually is `default` and nowadays is taken by pulseaudio. To list ALSA
-  devices you might use ``aplay`` program from ``alsa-utils`` package:
+* ``-d`` selects desired ALSA device. By default, first device, which is called
+  ``default`` is selected. That device is taken by pulseaudio nowadays, so
+  you'll see only two controls: one for master volume and the other for capture
+  volume. To be able to change all supported by soundcard controls, you need to
+  pass right PCM device to this option. First, you need to know which device
+  need to be passed as an argument to ``-d`` option. To list ALSA devices you
+  might use ``aplay`` program from ``alsa-utils`` package:
 
   .. code:: shell-session
 
