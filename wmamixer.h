@@ -38,7 +38,7 @@
 #define CLASS "Wmamixer"
 
 
-#define VERSION "0.1"
+#define VERSION "1.0"
 
 // User defines - custom
 #define BACKCOLOR "#202020"
