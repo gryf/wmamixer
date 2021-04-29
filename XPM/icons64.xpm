@@ -1,5 +1,5 @@
 /* XPM */
-static char *icons_xpm[] = {
+static char *icons64_xpm[] = {
 /* columns rows colors chars-per-pixel */
 "416 24 4 1 ",
 ".     c #202020 s back_color",

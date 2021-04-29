@@ -40,6 +40,53 @@ int main(int argc, char **argv) {
     xpmattr.exactColors = false;
     xpmattr.closeness = 40000;
     xpmattr.valuemask = XpmColorSymbols | XpmExactColors | XpmCloseness;
+
+    char * wmamixer_xpm;
+    char * tile_xpm;
+    char * icons_xpm;
+    char * digits_xpm;
+    char * chars_xpm;
+
+    switch (scale) {
+        case 1:
+            wmamixer_xpm = wmamixer64_xpm;
+            tile_xpm = tile64_xpm;
+            icons_xpm = icons64_xpm;
+            digits_xpm = digits64_xpm;
+            chars_xpm = chars64_xpm;
+            break;
+        case 2:
+            wmamixer_xpm = wmamixer128_xpm;
+            tile_xpm = tile128_xpm;
+            icons_xpm = icons128_xpm;
+            digits_xpm = digits128_xpm;
+            chars_xpm = chars128_xpm;
+            break;
+        case 3:
+            wmamixer_xpm = wmamixer192_xpm;
+            tile_xpm = tile192_xpm;
+            icons_xpm = icons192_xpm;
+            digits_xpm = digits192_xpm;
+            chars_xpm = chars192_xpm;
+            break;
+        case 4:
+            wmamixer_xpm = wmamixer256_xpm;
+            tile_xpm = tile256_xpm;
+            icons_xpm = icons256_xpm;
+            digits_xpm = digits256_xpm;
+            chars_xpm = chars256_xpm;
+            break;
+        default:
+            printf("Scale has to be either 1, or 2, or 3, or 4. Falling back to 1.\n");
+            scale = 1;
+            wmamixer_xpm = wmamixer64_xpm;
+            tile_xpm = tile64_xpm;
+            icons_xpm = icons64_xpm;
+            digits_xpm = digits64_xpm;
+            chars_xpm = chars64_xpm;
+            break;
+    }
+
     XpmCreatePixmapFromData(d_display, w_root, wmamixer_xpm, &pm_main,
             &pm_mask, &xpmattr);
     XpmCreatePixmapFromData(d_display, w_root, tile_xpm, &pm_tile, NULL,
@@ -50,18 +97,20 @@ int main(int argc, char **argv) {
             &xpmattr);
     XpmCreatePixmapFromData(d_display, w_root, chars_xpm, &pm_chars, NULL,
             &xpmattr);
-    pm_disp = XCreatePixmap(d_display, w_root, 64, 64, DefaultDepth(d_display,
-                DefaultScreen(d_display)));
+    pm_disp = XCreatePixmap(d_display, w_root, 64 * scale, 64 * scale,
+            DefaultDepth(d_display, DefaultScreen(d_display)));
 
     if (wmaker || ushape || astep) {
-        XShapeCombineMask(d_display, w_activewin, ShapeBounding, winsize/2-32,
-                winsize/2-32, pm_mask, ShapeSet);
+        XShapeCombineMask(d_display, w_activewin, ShapeBounding,
+                winsize/2 - (32 * scale),
+                winsize/2 - (32 * scale), pm_mask, ShapeSet);
     } else {
-        XCopyArea(d_display, pm_tile, pm_disp, gc_gc, 0, 0, 64, 64, 0, 0);
+        XCopyArea(d_display, pm_tile, pm_disp, gc_gc, 0, 0, 64 * scale,
+                64 * scale, 0, 0);
     }
 
     XSetClipMask(d_display, gc_gc, pm_mask);
-    XCopyArea(d_display, pm_main, pm_disp, gc_gc, 0, 0, 64, 64, 0, 0);
+    XCopyArea(d_display, pm_main, pm_disp, gc_gc, 0, 0, 64*scale, 64*scale, 0, 0);
     XSetClipMask(d_display, gc_gc, None);
 
     mix = Mixer_create();
@@ -483,7 +532,7 @@ void Selem_destroy() {
 
 void initXWin(int argc, char **argv) {
     bool pos;
-    winsize = astep ? ASTEPSIZE : NORMSIZE;
+    winsize = (astep ? ASTEPSIZE : NORMSIZE)*scale;
     XWMHints wmhints;
     XSizeHints shints;
 
@@ -594,6 +643,19 @@ void scanArgs(int argc, char **argv) {
 
         if (strcmp(argv[i], "-novol") == 0)
             no_volume_display = 1;
+
+        if (strcmp(argv[i], "-scale") == 0) {
+            if (i < argc - 1) {
+                i++;
+                if (strlen(argv[i]) > 255) {
+                    fprintf(stderr, "%s: Illegal scale.\n", NAME);
+                    exit(1);
+                }
+                char *s;
+                scale = strtol(argv[i], &s, 10);
+            }
+            continue;
+        }
 
         if (strcmp(argv[i], "-d") == 0) {
             if (i < argc - 1) {
@@ -706,9 +768,10 @@ void pressEvent(XButtonEvent *xev) {
         return;
     }
 
-    x = xev->x - (winsize / 2 - 32);
-    y = xev->y - (winsize / 2 - 32);
-    if (x >= 5 && y >= 47 && x <= 17 && y <= 57) {
+    x = xev->x - (winsize / 2 - (32 * scale));
+    y = xev->y - (winsize / 2 - (32 * scale));
+    if (x >= 5 * scale && y >= 47 * scale &&
+            x <= 17 * scale && y <= 57 * scale) {
         curchannel--;
         if (curchannel < 0)
             curchannel = mix->devices_no -1;
@@ -718,7 +781,8 @@ void pressEvent(XButtonEvent *xev) {
         checkVol(true);
         return;
     }
-    if (x >= 18 && y >= 47 && x <= 30 && y <= 57) {
+    if (x >= 18 * scale && y >= 47 * scale &&
+            x <= 30 * scale && y <= 57 * scale) {
         curchannel++;
         if (curchannel >= mix->devices_no)
             curchannel = 0;
@@ -728,17 +792,19 @@ void pressEvent(XButtonEvent *xev) {
         checkVol(true);
         return;
     }
-    if (x >= 37 && x <= 56 && y >= 8 && y <= 56) {
-        v = ((60 - y) * 100) / (2 * 25);
+    if (x >= 37 * scale && x <= 56 * scale &&
+            y >= 8 * scale && y <= 56 * scale) {
+        v = ((60 * scale - y) * 100) / (50 * scale);
         dragging = true;
-        if (x <= 50)
+        if (x <= 50 * scale)
             Mixer_set_left(curchannel, v);
-        if (x >= 45)
+        if (x >= 45 * scale)
             Mixer_set_right(curchannel, v);
         checkVol(false);
         return;
     }
-    if (x >= 5 && y >= 21 && x <= 30 && y <= 42) {
+    if (x >= 5 * scale && y >= 21 * scale &&
+            x <= 30 * scale && y <= 42 * scale) {
         drawText(selems[curchannel]->name);
         return;
     }
@@ -752,23 +818,25 @@ void releaseEvent() {
 }
 
 void motionEvent(XMotionEvent *xev) {
-    int x = xev->x - (winsize / 2 - 32);
-    int y = xev->y - (winsize / 2 - 32);
-    if (x >= 37 && x <= 56 && y >= 8 && dragging) {
-        int v = ((60 - y) * 100) / (2 * 25);
+    int x = xev->x - (winsize / 2 - (32 * scale));
+    int y = xev->y - (winsize / 2 - (32 * scale));
+    if (x >= 37 * scale && x <= 56 * scale && y >= 8 * scale && dragging) {
+        int v = ((60 * scale - y) * 100) / (50 * scale);
         if (v < 0)
             v = 0;
-        if (x <= 50)
+        if (x <= 50 * scale)
             Mixer_set_left(curchannel, v);
-        if (x >= 45)
+        if (x >= 45 * scale)
             Mixer_set_right(curchannel, v);
         checkVol(false);
     }
 }
 
 void repaint() {
-    XCopyArea(d_display, pm_disp, w_activewin, gc_gc, 0, 0, 64, 64,
-            winsize / 2 - 32, winsize / 2 - 32);
+    XCopyArea(d_display, pm_disp, w_activewin, gc_gc, 0, 0,
+            64 * scale, 64 * scale,
+            winsize / 2 - (32 * scale),
+            winsize / 2 - (32 * scale));
     XEvent xev;
     while (XCheckTypedEvent(d_display, Expose, &xev)) {
         continue;
@@ -779,7 +847,8 @@ void update() {
     drawText(selems[curchannel]->name);
 
     XCopyArea(d_display, pm_icon, pm_disp, gc_gc,
-            selems[curchannel]->iconIndex * 26, 0, 26, 24, 5, 19);
+            selems[curchannel]->iconIndex * (26 * scale), 0,
+            26 * scale, 24 * scale, 5 * scale, 19 * scale);
     if (selems[curchannel]->stereo) {
         drawStereo(true);
         drawStereo(false);
@@ -797,15 +866,17 @@ void drawText(char *text) {
         p2 = toupper(*p);
         if (p2 >= 'A' && p2 <= 'Z') {
             XCopyArea(d_display, pm_chars, pm_disp, gc_gc,
-                    6 * ((int)p2 - 65), 0, 6, 9, 5 + (i * 6), 5);
+                    (6 * ((int)p2 - 65)) * scale, 0,
+                    6 * scale, 9 * scale, (5 + (i * 6)) * scale, 5 * scale);
         } else if (p2 >= '0' && p2 <= '9') {
             XCopyArea(d_display, pm_digits, pm_disp, gc_gc,
-                    6 * ((int)p2 - 48), 0, 6, 9, 5 + (i * 6), 5);
+                    (6 * ((int)p2 - 48)) * scale, 0, 6 * scale, 9 * scale,
+                    (5 + (i * 6)) * scale, 5 * scale);
         } else {
             if (p2 == '\0')
                 p--;
-            XCopyArea(d_display, pm_digits, pm_disp, gc_gc, 60, 0, 6, 9,
-                    5 + (i * 6), 5);
+            XCopyArea(d_display, pm_digits, pm_disp, gc_gc, 60 * scale, 0,
+                    6 * scale, 9 * scale, (5 + (i * 6)) * scale, 5 * scale);
         }
     }
     if (!no_volume_display)
@@ -824,8 +895,9 @@ void drawVolLevel() {
     digits[3] = 10;
 
     for (i = 0; i < 4; i++) {
-        XCopyArea(d_display, pm_digits, pm_disp, gc_gc, 6*digits[i], 0, 6, 9,
-                5+(i*6), 5);
+        XCopyArea(d_display, pm_digits, pm_disp, gc_gc,
+                (6 * digits[i]) * scale, 0, 6 * scale, 9 * scale,
+                (5 + (i * 6)) * scale, 5 * scale);
     }
 }
 
@@ -834,13 +906,15 @@ void drawStereo(bool left) {
     short pos = left? 37 : 48;
 
     XSetForeground(d_display, gc_gc, color[0]);
-    XFillRectangle(d_display, pm_disp, gc_gc, 46, 7, 2, 49);
+    XFillRectangle(d_display, pm_disp, gc_gc, 46 * scale, 7 * scale,
+            2 * scale, 49 * scale);
 
     XSetForeground(d_display, gc_gc, color[1]);
     for (i = 0; i < 25; i++) {
         if (i == ((left ? curleft : curright) * 25) / 100)
             XSetForeground(d_display, gc_gc, color[3]);
-        XFillRectangle(d_display, pm_disp, gc_gc, pos, 55 - 2 * i, 9, 1);
+        XFillRectangle(d_display, pm_disp, gc_gc, pos * scale, 
+                (55 - 2 * i) * scale, 9 * scale, 1 * scale);
     }
 }
 
@@ -850,7 +924,8 @@ void drawMono() {
     for (i = 0; i < 25; i++) {
         if (i == (curright * 25) / 100)
             XSetForeground(d_display, gc_gc, color[3]);
-        XFillRectangle(d_display, pm_disp, gc_gc, 37, 55 - 2 * i, 20, 1);
+        XFillRectangle(d_display, pm_disp, gc_gc, 37 * scale,
+                (55 - 2 * i) * scale, 20 * scale, 1 * scale);
     }
 }
 
@@ -863,16 +938,17 @@ void drawBtns(int btns) {
 
 void drawBtn(int x, int y, int w, int h, bool down) {
     if (!down) {
-        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x, y, w, h, x, y);
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x * scale, y * scale,
+                w * scale, h * scale, x * scale, y * scale);
     } else {
-        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x, y, 1, h - 1,
-                x + w - 1, y + 1);
-        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x + w - 1, y + 1, 1,
-                h - 1, x, y);
-        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x, y, w - 1, 1, x + 1,
-                y + h - 1);
-        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x + 1, y + h - 1, w - 1,
-                1, x, y);
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x * scale, y * scale,
+                1, (h - 1) * scale, (x + w - 1) * scale, (y + 1) * scale);
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, (x + w - 1) * scale,
+                (y + 1) * scale, 1, (h - 1) * scale, x * scale, y * scale);
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, x * scale, y * scale,
+                (w - 1) * scale, 1, (x + 1) * scale, (y + h - 1) * scale);
+        XCopyArea(d_display, pm_main, pm_disp, gc_gc, (x + 1) * scale,
+                (y + h - 1) * scale, (w - 1) * scale, 1, x * scale, y * scale);
     }
 }
 
@@ -897,6 +973,7 @@ See the README file for a more complete notice.\n\n", stdout);
    -l led_color        use the specified color for led display\n\
    -b back_color       use the specified color for backgrounds\n\
    -d alsa_device      use specified device  (rather than 'default')\n\
+   -scale number       set window scale      (from 1 to 4)\n\
    -position position  set window position   (see X manual pages)\n\
    -display display    select target display (see X manual pages)\n\n",
     stdout);

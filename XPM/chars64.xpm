@@ -1,5 +1,5 @@
 /* XPM */
-static char * chars_xpm[] = {
+static char * chars64_xpm[] = {
 "156 9 4 1",
 " 	c #282828 s back_color",
 ".	c #004941 s led_color_low",

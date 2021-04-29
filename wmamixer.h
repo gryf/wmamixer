@@ -63,13 +63,28 @@ Pixmap pm_digits;
 Pixmap pm_chars;
 
 // Xpm images - standard
-#include "XPM/wmamixer.xpm"
-#include "XPM/tile.xpm"
+#include "XPM/wmamixer64.xpm"
+#include "XPM/wmamixer128.xpm"
+#include "XPM/wmamixer192.xpm"
+#include "XPM/wmamixer256.xpm"
+#include "XPM/tile64.xpm"
+#include "XPM/tile128.xpm"
+#include "XPM/tile192.xpm"
+#include "XPM/tile256.xpm"
 
 // Xpm images - custom
-#include "XPM/icons.xpm"
-#include "XPM/digits.xpm"
-#include "XPM/chars.xpm"
+#include "XPM/icons64.xpm"
+#include "XPM/icons128.xpm"
+#include "XPM/icons192.xpm"
+#include "XPM/icons256.xpm"
+#include "XPM/digits64.xpm"
+#include "XPM/digits128.xpm"
+#include "XPM/digits192.xpm"
+#include "XPM/digits256.xpm"
+#include "XPM/chars64.xpm"
+#include "XPM/chars128.xpm"
+#include "XPM/chars192.xpm"
+#include "XPM/chars256.xpm"
 
 // Variables for command-line arguments - standard
 bool wmaker = WINDOWMAKER;
@@ -78,6 +93,7 @@ bool astep = AFTERSTEP;
 char display[256] = "";
 char position[256] = "";
 int winsize;
+int scale = 1;
 bool no_volume_display = 0;
 
 // Variables for command-line arguments - custom
