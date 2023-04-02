@@ -38,7 +38,7 @@
 #define CLASS "Wmamixer"
 
 
-#define VERSION "1.0"
+#define VERSION "1.1"
 
 // User defines - custom
 #define BACKCOLOR "#202020"
@@ -142,7 +142,7 @@ typedef struct {
 } slideCaptureMono;
 
 struct NamesCount {
-    short int pcm, line, lineb, mic, micb, capt, vol, aux;
+    short unsigned int pcm, line, lineb, mic, micb, capt, vol, aux;
 } namesCount = {1, 1, 1, 1, 1, 1, 1, 1};
 
 struct Selem *selems[32] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -194,7 +194,7 @@ void Mixer_set_right(int current, int value);
 void Mixer_set_limits(snd_mixer_elem_t *elem, struct Selem *selem);
 void Mixer_set_volume(int current, int channelIndex, int value);
 
-void Selem_set_name(struct Selem *selem, const char *name, short int *count);
+void Selem_set_name(struct Selem *selem, const char *name, short unsigned int *count);
 void Selem_destroy();
 
 #endif  // WMAMIXER_H_

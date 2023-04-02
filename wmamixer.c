@@ -302,14 +302,14 @@ void Mixer_set_selem_props(struct Selem *selem, const char *name) {
     }
 }
 
-void Selem_set_name(struct Selem *selem, const char *name, short int *count) {
-    char new_name[5], buf[5];
+void Selem_set_name(struct Selem *selem, const char *name, short unsigned int *count) {
+    char new_name[5], buf[4];
 
     if (*count > 10) {
         snprintf(new_name, sizeof(new_name), "%s", name);
     } else {
-        snprintf(buf, sizeof(buf) - 1, "%s", name);
-        snprintf(new_name, sizeof(new_name), "%s%d", buf, *count);
+        snprintf(buf, sizeof(buf), "%s", name);
+        snprintf(new_name, sizeof(new_name), "%s%hu", buf, *count);
     }
 
     selem->name = strdup(new_name);
